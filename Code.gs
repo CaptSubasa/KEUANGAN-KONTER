@@ -42,19 +42,26 @@ var CFG = {
 
   // Palet warna (modern, profesional - bukan kuning polos)
   COLOR: {
-    HEADER_BG:   '#102A43',  // biru tua header tabel
+    HEADER_BG:   '#0F172A',  // slate-900
     HEADER_TX:   '#FFFFFF',
-    BG_APP:      '#F8FAFC',  // abu sangat muda
+    BG_APP:      '#F8FAFC',  // slate-50
     CARD:        '#FFFFFF',
-    BORDER:      '#E2E8F0',
-    ACCENT:      '#1F6FEB',  // biru aksen
-    POS:         '#16A34A',  // hijau
-    NEG:         '#DC2626',  // merah
-    WARN:        '#D97706',  // oranye
-    MUTED:       '#64748B',  // abu teks
-    INPUT_BG:    '#FFFFFF',  // kolom input (bisa diedit)
-    AUTO_BG:     '#F1F5F9',  // kolom formula (diproteksi)
-    SNAP_BG:     '#FEF3C7'   // kolom snapshot (diisi otomatis)
+    BORDER:      '#E2E8F0',  // slate-200
+    BORDER_SOFT: '#F1F5F9',  // slate-100
+    ACCENT:      '#2563EB',  // blue-600
+    ACCENT_LT:   '#DBEAFE',  // blue-100
+    POS:         '#059669',  // emerald-600
+    POS_LT:      '#D1FAE5',  // emerald-100
+    NEG:         '#DC2626',  // red-600
+    NEG_LT:      '#FEE2E2',  // red-100
+    WARN:        '#D97706',  // amber-600
+    WARN_LT:     '#FEF3C7',  // amber-100
+    MUTED:       '#64748B',  // slate-500
+    SUBMUTED:    '#94A3B8',  // slate-400
+    TEXT_DARK:   '#1E293B',  // slate-800
+    INPUT_BG:    '#FFFFFF',
+    AUTO_BG:     '#F1F5F9',
+    SNAP_BG:     '#FEF3C7'
   }
 };
 
