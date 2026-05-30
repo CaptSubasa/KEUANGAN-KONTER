@@ -121,6 +121,9 @@ function onOpen() {
     .addItem('🔄 Refresh Buku Besar & Saldo', 'rebuildLedger')
     .addItem('🧪 Jalankan Skenario Uji', 'runTestScenarios')
     .addSeparator()
+    .addItem('🧹 Hapus Semua Data Contoh (mulai data asli)', 'confirmHapusDataContoh')
+    .addItem('💰 Atur Ulang Saldo Awal Akun', 'aturSaldoAwal')
+    .addSeparator()
     .addItem('🏗️ BUILD ULANG SEMUA (reset)', 'confirmBuildAll')
     .addItem('🔓 Lepas Semua Proteksi', 'removeAllProtections')
     .addToUi();
@@ -209,4 +212,75 @@ function logChange(ss, sheet, aksi, ket) {
       Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm:ss'),
       Session.getActiveUser().getEmail() || 'system', sheet, aksi, ket]);
   } catch (e) { /* abaikan */ }
+}
+
+
+
+// ===========================================================================
+//  HAPUS DATA CONTOH  (siap pakai data asli)
+// ===========================================================================
+function confirmHapusDataContoh() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.alert('Hapus Semua Data Contoh',
+    'Ini akan MENGHAPUS semua data contoh di:\n\n' +
+    '• penjualan\n• pembelian\n• transaksi_kas\n• koreksi_stok\n• utang_piutang\n• buku_besar\n• log_perubahan\n\n' +
+    'Master tetap aman: produk, akun, data_master.\n\n' +
+    'Lanjutkan?',
+    ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) return;
+  hapusDataContoh();
+}
+
+function hapusDataContoh() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Membersihkan data contoh...', 'Hapus', 4);
+
+  // Sheet transaksi -> kosongkan baris 2 ke bawah, kolom A sampai akhir header
+  var sheets = [
+    CFG.SHEET.PENJUALAN, CFG.SHEET.PEMBELIAN, CFG.SHEET.TRANSAKSI_KAS,
+    CFG.SHEET.KOREKSI_STOK, CFG.SHEET.UTANG_PIUTANG, CFG.SHEET.LOG
+  ];
+  sheets.forEach(function(name){
+    var sh = ss.getSheetByName(name);
+    if (!sh) return;
+    var nCol = HEADERS[name] ? HEADERS[name].length : sh.getLastColumn();
+    sh.getRange(2, 1, CFG.MAX_ROW - 1, nCol).clearContent();
+  });
+
+  // Buku besar dibangun ulang otomatis
+  rebuildLedger();
+  SpreadsheetApp.flush();
+
+  // Hapus saldo fisik (G) di akun supaya bersih, biarkan saldo awal
+  var ak = ss.getSheetByName(CFG.SHEET.AKUN);
+  if (ak) ak.getRange('G2:G' + CFG.MAX_ROW).clearContent();
+
+  logChange(ss, 'SISTEM', 'BERSIH', 'Semua data contoh dihapus, siap pakai data asli');
+  SpreadsheetApp.getUi().alert('✅ Selesai',
+    'Semua data contoh telah dihapus.\n\n' +
+    'LANGKAH BERIKUTNYA:\n' +
+    '1. Buka sheet "akun" → atur Saldo Awal sesuai uang Anda yang sebenarnya.\n' +
+    '2. Mulai input transaksi harian di sheet "penjualan", "pembelian", "transaksi_kas".\n' +
+    '3. Klik ⚙️ Keuangan → 🔄 Refresh setiap selesai input.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+// ===========================================================================
+//  ATUR ULANG SALDO AWAL  (template kosong supaya user isi manual)
+// ===========================================================================
+function aturSaldoAwal() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ak = ss.getSheetByName(CFG.SHEET.AKUN);
+  if (!ak) return;
+  ss.setActiveSheet(ak);
+  ak.getRange('C2').activate();
+  SpreadsheetApp.getUi().alert('💰 Atur Saldo Awal',
+    'Saya pindahkan Anda ke sheet "akun".\n\n' +
+    'Isi kolom "Saldo Awal" (kolom C) sesuai uang Anda saat ini di tiap akun:\n' +
+    '- Kas Utama (uang tunai)\n' +
+    '- Bank BCA (saldo rekening)\n' +
+    '- QRIS, ShopeePay, GoPay, DANA, OVO (saldo e-wallet)\n' +
+    '- Saldo Supplier (deposit di supplier pulsa)\n\n' +
+    'Setelah selesai, klik ⚙️ Keuangan → 🔄 Refresh.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
 }

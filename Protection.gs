@@ -45,10 +45,11 @@ function applyProtection(ss) {
   var lap = ss.getSheetByName(CFG.SHEET.LAPORAN);
   if (lap) lap.getRange('A4:G17').protect().setDescription('Tabel laba rugi - otomatis').setWarningOnly(true);
 
-  // 4. proteksi area tampilan dashboard kecuali baris filter (row 6)
+  // 4. proteksi area tampilan dashboard kecuali baris filter (row 7)
   var dash = ss.getSheetByName(CFG.SHEET.DASHBOARD);
   if (dash) {
-    var p = dash.getRange('B8:L45').protect().setDescription('Area dashboard - otomatis').setWarningOnly(true);
+    dash.getRange('B2:M5').protect().setDescription('Header dashboard').setWarningOnly(true);
+    dash.getRange('B9:M48').protect().setDescription('Area dashboard - otomatis').setWarningOnly(true);
   }
 
   logChange(ss, 'SISTEM', 'PROTEKSI', 'Proteksi warning-only diterapkan');
