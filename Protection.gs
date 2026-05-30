@@ -49,7 +49,8 @@ function applyProtection(ss) {
   var dash = ss.getSheetByName(CFG.SHEET.DASHBOARD);
   if (dash) {
     dash.getRange('B2:M5').protect().setDescription('Header dashboard').setWarningOnly(true);
-    dash.getRange('B9:M48').protect().setDescription('Area dashboard - otomatis').setWarningOnly(true);
+    dash.getRange('B6:M6').protect().setDescription('Label filter').setWarningOnly(true);
+    dash.getRange('B9:M58').protect().setDescription('Area dashboard - otomatis').setWarningOnly(true);
   }
 
   logChange(ss, 'SISTEM', 'PROTEKSI', 'Proteksi warning-only diterapkan');

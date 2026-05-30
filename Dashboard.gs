@@ -8,52 +8,56 @@
  */
 
 function buildDashboard(ss) {
-  setupDashboardHelper_(ss);   // siapkan _kalkulasi (filter, bucket, top list)
+  setupDashboardHelper_(ss);
 
   var sh = ss.getSheetByName(CFG.SHEET.DASHBOARD);
   sh.clear();
   sh.getCharts().forEach(function(c){ sh.removeChart(c); });
   sh.setHiddenGridlines(true);
 
-  // lebar kolom & kanvas - lebih lega, total 14 kolom
-  sh.setColumnWidth(1, 28);
-  for (var c = 2; c <= 13; c++) sh.setColumnWidth(c, 95);
-  sh.setColumnWidth(14, 28);
-  sh.getRange('A1:N60').setBackground(CFG.COLOR.BG_APP);
+  // === Kanvas: kolom A & N margin, B-M (12 kolom konten) ===
+  sh.setColumnWidth(1, 22);
+  for (var c = 2; c <= 13; c++) sh.setColumnWidth(c, 96);
+  sh.setColumnWidth(14, 22);
+  sh.getRange('A1:N72').setBackground(CFG.COLOR.BG_APP);
 
   var JUAL=CFG.SHEET.PENJUALAN, TK=CFG.SHEET.TRANSAKSI_KAS, PR=CFG.SHEET.PRODUK,
       UP=CFG.SHEET.UTANG_PIUTANG, AK=CFG.SHEET.AKUN, K=CFG.SHEET.KALKULASI;
 
-  // ---------- HEADER (bar gradien + sub-header info) ----------
-  sh.getRange('B2:M2').merge().setValue('💼  KEUANGAN KONTER PULSA')
-    .setBackground(CFG.COLOR.HEADER_BG).setFontColor('#FFFFFF').setFontSize(20)
-    .setFontFamily('Calibri').setFontWeight('bold')
+  // ===========================================================
+  //  HEADER  (banner gelap + sub-info dengan timestamp)
+  // ===========================================================
+  sh.getRange('B2:M2').merge().setValue('  💼  KEUANGAN KONTER PULSA  •  DASHBOARD')
+    .setBackground('#0F172A').setFontColor('#FFFFFF').setFontSize(22).setFontWeight('bold')
     .setVerticalAlignment('middle').setHorizontalAlignment('left');
-  sh.setRowHeight(2, 50);
-  sh.getRange('B3:M3').merge().setFormula(
-    '="📅  "&IF(D6="Semua","Tahun "&B6,TEXT(DATE(B6,IF(D6="Semua",1,D6),1),"mmmm yyyy"))' +
-    '&"     |     📊  Mode: "&F6&"     |     💳  Akun: "&H6&"     |     🏷️  Kategori: "&J6&"     |     ✓  Status: "&L6')
-    .setBackground('#1B3A5B').setFontColor('#E2E8F0').setFontSize(10)
-    .setFontStyle('italic').setVerticalAlignment('middle');
-  sh.setRowHeight(3, 24);
-  sh.setRowHeight(4, 12);   // spacer
+  sh.setRowHeight(2, 58);
 
-  // ---------- FILTER BAR ----------
-  sh.getRange('B5:M5').merge().setValue('  ⚙️  FILTER  ')
-    .setBackground('#E8EEF5').setFontColor(CFG.COLOR.HEADER_BG)
-    .setFontWeight('bold').setFontSize(9).setHorizontalAlignment('left');
+  sh.getRange('B3:M3').merge().setFormula(
+    '="  📅  "&IF(D7="Semua","Tahun "&B7,TEXT(DATE(B7,IF(D7="Semua",1,D7),1),"mmmm yyyy"))' +
+    '&"   ●   📊  "&F7&"   ●   💳  "&H7&"   ●   🏷️  "&K7&"   ●   ✓  "&M7' +
+    '&"   ●   🕒  Update: "&TEXT(NOW(),"dd-mmm hh:mm")')
+    .setBackground('#1E293B').setFontColor('#CBD5E1').setFontSize(10)
+    .setFontStyle('italic').setVerticalAlignment('middle');
+  sh.setRowHeight(3, 28);
+  sh.setRowHeight(4, 10);
+
+  // ===========================================================
+  //  FILTER
+  // ===========================================================
+  sh.getRange('B5:M5').merge().setValue('  ⚙️  FILTER  ─  ubah dropdown di bawah, semua angka & grafik akan otomatis menyesuaikan')
+    .setBackground(CFG.COLOR.ACCENT).setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(10);
   sh.setRowHeight(5, 22);
-  var fLabels = [['Tahun',2],['Bulan',4],['Mode Waktu',6],['Akun',8],['Kategori',11],['Status',13]];
+
+  var fLabels = [['TAHUN',2],['BULAN',4],['MODE WAKTU',6],['AKUN',8],['KATEGORI',11],['STATUS',13]];
   fLabels.forEach(function(f){
-    sh.getRange(6, f[1]).setValue(f[0]).setFontSize(8).setFontColor(CFG.COLOR.MUTED).setFontWeight('bold');
+    sh.getRange(6, f[1]).setValue(f[0]).setFontSize(8).setFontColor(CFG.COLOR.MUTED)
+      .setFontWeight('bold').setBackground(CFG.COLOR.BG_APP);
     sh.getRange(7, f[1]).setBackground('#FFFFFF').setFontWeight('bold').setFontColor(CFG.COLOR.ACCENT)
       .setHorizontalAlignment('center').setFontSize(11)
       .setBorder(true,true,true,true,false,false,CFG.COLOR.BORDER,SpreadsheetApp.BorderStyle.SOLID);
   });
-  sh.setRowHeight(6, 18);
-  sh.setRowHeight(7, 26);
+  sh.setRowHeight(6, 16); sh.setRowHeight(7, 30); sh.setRowHeight(8, 14);
 
-  // default value & validasi filter (geser ke baris 7)
   var now = new Date();
   sh.getRange('B7').setValue(now.getFullYear());
   sh.getRange('D7').setValue('Semua');
@@ -68,58 +72,94 @@ function buildDashboard(ss) {
   filterDV_(ss, sh, 'K7', K, 'AE');
   filterDV_(ss, sh, 'M7', K, 'AF');
 
-  // pakai cell B7,D7,F7,H7,K7,M7 sebagai filter (perlu update _kalkulasi mirror)
-  // (akan di-set di setupDashboardHelper_)
-
-  // spacer
-  sh.setRowHeight(8, 14);
-
-  // ---------- KPI CARDS (4 + 4) ----------
+  // ===========================================================
+  //  KPI TOP (4 cards, baris 9-12 : label/value/subtitle/sparkline)
+  // ===========================================================
   var dr = '">="&'+K+'!G1', dr2='"<="&'+K+'!G2';
   var omzet = '=SUMIFS('+JUAL+'!K2:K'+MR+','+JUAL+'!T2:T'+MR+',"Final",'+JUAL+'!A2:A'+MR+','+dr+','+JUAL+'!A2:A'+MR+','+dr2+','+JUAL+'!F2:F'+MR+','+K+'!E8)';
-  var labaKotor = '=SUMIFS('+JUAL+'!L2:L'+MR+','+JUAL+'!T2:T'+MR+',"Final",'+JUAL+'!A2:A'+MR+','+dr+','+JUAL+'!A2:A'+MR+','+dr2+','+JUAL+'!F2:F'+MR+','+K+'!E8)';
-  var pengeluaran = '=SUMIFS('+TK+'!Q2:Q'+MR+','+TK+'!A2:A'+MR+','+dr+','+TK+'!A2:A'+MR+','+dr2+')';
-  var adminFee = 'SUMIFS('+TK+'!I2:I'+MR+','+TK+'!A2:A'+MR+','+dr+','+TK+'!A2:A'+MR+','+dr2+')';
+  var laba  = '=SUMIFS('+JUAL+'!L2:L'+MR+','+JUAL+'!T2:T'+MR+',"Final",'+JUAL+'!A2:A'+MR+','+dr+','+JUAL+'!A2:A'+MR+','+dr2+','+JUAL+'!F2:F'+MR+','+K+'!E8)';
+  var beban = '=SUMIFS('+TK+'!Q2:Q'+MR+','+TK+'!A2:A'+MR+','+dr+','+TK+'!A2:A'+MR+','+dr2+')';
+  var fee   = 'SUMIFS('+TK+'!I2:I'+MR+','+TK+'!A2:A'+MR+','+dr+','+TK+'!A2:A'+MR+','+dr2+')';
 
-  // baris 9-11 = kartu atas, 12-14 = kartu bawah
-  kpiCard_(sh, 9, 2,  '💰 OMZET',         'Total penjualan periode',     omzet,                       CFG.COLOR.ACCENT);
-  kpiCard_(sh, 9, 5,  '📈 LABA KOTOR',    'Jual − HPP',                  labaKotor,                   CFG.COLOR.POS);
-  kpiCard_(sh, 9, 8,  '💸 PENGELUARAN',   'Biaya operasional',           pengeluaran,                 CFG.COLOR.NEG);
-  kpiCard_(sh, 9, 11, '🎯 LABA BERSIH',   'Kotor + Admin − Beban',       '=F10+'+adminFee+'-I10',     CFG.COLOR.POS);
-  kpiCard_(sh, 12, 2, '🏦 SALDO KAS/BANK','Total saldo semua akun',      '=SUM('+AK+'!F2:F'+MR+')',   CFG.COLOR.HEADER_BG);
-  kpiCard_(sh, 12, 5, '📦 NILAI STOK',    'Stok akhir × harga modal',    '=SUM('+PR+'!L2:L'+MR+')',   CFG.COLOR.HEADER_BG);
-  kpiCard_(sh, 12, 8, '📥 PIUTANG',       'Tagihan ke pelanggan',        '=SUMIFS('+UP+'!H2:H'+MR+','+UP+'!C2:C'+MR+',"Piutang")', CFG.COLOR.WARN);
-  kpiCard_(sh, 12,11, '📤 HUTANG',        'Kewajiban ke supplier',       '=SUMIFS('+UP+'!H2:H'+MR+','+UP+'!C2:C'+MR+',"Hutang")',  CFG.COLOR.WARN);
+  // Top KPI: dengan sparkline trend
+  premiumKPI_(sh, 9,  2, '💰  OMZET',         'Total penjualan periode', omzet,                   CFG.COLOR.ACCENT, K+'!O2:O54');
+  premiumKPI_(sh, 9,  5, '📈  LABA KOTOR',    'Jual − HPP',              laba,                    CFG.COLOR.POS,    K+'!P2:P54');
+  premiumKPI_(sh, 9,  8, '💸  PENGELUARAN',   'Biaya operasional',       beban,                   CFG.COLOR.NEG,    null);
+  premiumKPI_(sh, 9, 11, '🎯  LABA BERSIH',   'Kotor + Admin − Beban',   '=B10+'+fee+'-H10',      CFG.COLOR.POS,    null);
 
-  sh.setRowHeight(15, 16);
+  sh.setRowHeight(13, 14);
 
-  // ---------- SECTION: GRAFIK + ALERT ----------
-  sh.getRange('B16:G16').merge().setValue('  📈  TREN OMZET & LABA  (ikut Mode Waktu)')
-    .setFontWeight('bold').setFontColor('#FFFFFF').setFontSize(11)
-    .setBackground(CFG.COLOR.HEADER_BG).setHorizontalAlignment('left');
-  sh.getRange('I16:M16').merge().setValue('  🔔  PANEL ALERT')
-    .setFontWeight('bold').setFontColor('#FFFFFF').setFontSize(11)
-    .setBackground(CFG.COLOR.NEG).setHorizontalAlignment('left');
-  sh.setRowHeight(16, 24);
+  // KPI BOTTOM (status keuangan)
+  premiumKPI_(sh, 14,  2, '🏦  SALDO KAS/BANK', 'Total saldo akun',     '=SUM('+AK+'!F2:F'+MR+')',                                    CFG.COLOR.HEADER_BG, null);
+  premiumKPI_(sh, 14,  5, '📦  NILAI STOK',     'Stok akhir × modal',   '=SUM('+PR+'!L2:L'+MR+')',                                    CFG.COLOR.HEADER_BG, null);
+  premiumKPI_(sh, 14,  8, '📥  PIUTANG',        'Tagihan ke pelanggan', '=SUMIFS('+UP+'!H2:H'+MR+','+UP+'!C2:C'+MR+',"Piutang")',     CFG.COLOR.WARN,      null);
+  premiumKPI_(sh, 14, 11, '📤  HUTANG',         'Kewajiban ke supplier','=SUMIFS('+UP+'!H2:H'+MR+','+UP+'!C2:C'+MR+',"Hutang")',      CFG.COLOR.WARN,      null);
+
+  sh.setRowHeight(18, 14);
+
+  // ===========================================================
+  //  SECTION: TREN OMZET & LABA  (chart utama, full width)
+  // ===========================================================
+  sh.getRange('B19:M19').merge().setValue('  📈  TREN OMZET & LABA  ─  grafik berubah otomatis sesuai Mode Waktu')
+    .setBackground(CFG.COLOR.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+  sh.setRowHeight(19, 24);
 
   var kal = ss.getSheetByName(K);
   var chart = sh.newChart().asComboChart()
     .addRange(kal.getRange('N1:P54'))
-    .setPosition(17, 2, 4, 4)
+    .setPosition(20, 2, 4, 4)
     .setOption('title', '')
-    .setOption('legend', { position: 'bottom', textStyle: { fontSize: 10 } })
-    .setOption('width', 560).setOption('height', 320)
+    .setOption('legend', { position: 'top', alignment: 'end', textStyle: { fontSize: 11, bold: true } })
+    .setOption('width', 1130).setOption('height', 340)
     .setOption('colors', [CFG.COLOR.ACCENT, CFG.COLOR.POS])
     .setOption('seriesType', 'bars')
-    .setOption('series', { 1: { type: 'line', lineWidth: 3, pointSize: 5 } })
-    .setOption('hAxis', { textStyle: { fontSize: 9 } })
-    .setOption('vAxis', { format: 'short', textStyle: { fontSize: 9 } })
+    .setOption('series', { 0: { labelInLegend: 'Omzet' }, 1: { type: 'line', lineWidth: 3, pointSize: 6, labelInLegend: 'Laba Kotor' } })
+    .setOption('hAxis', { textStyle: { fontSize: 10, color: '#475569' } })
+    .setOption('vAxis', { format: 'short', textStyle: { fontSize: 10, color: '#475569' }, gridlines: { color: '#E2E8F0' } })
     .setOption('backgroundColor', CFG.COLOR.CARD)
-    .setOption('chartArea', { left: 60, top: 20, width: '85%', height: '75%' })
+    .setOption('chartArea', { left: 70, top: 30, width: '88%', height: '78%' })
+    .setOption('bar', { groupWidth: '60%' })
     .build();
   sh.insertChart(chart);
+  for (var rr = 20; rr <= 35; rr++) sh.setRowHeight(rr, 22);
+  sh.setRowHeight(36, 14);
 
-  // PANEL ALERT (kolom I-M, baris 17 ke bawah)
+  // ===========================================================
+  //  SECTION: TOP PRODUK (kiri) + PANEL ALERT (kanan)
+  // ===========================================================
+  sh.getRange('B37:G37').merge().setValue('  🏆  TOP 5 PRODUK  ─  qty terjual')
+    .setBackground(CFG.COLOR.POS).setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+  sh.getRange('H37:M37').merge().setValue('  🔔  PANEL ALERT  ─  status sistem')
+    .setBackground(CFG.COLOR.NEG).setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+  sh.setRowHeight(37, 24);
+
+  // --- TOP PRODUK (kolom B-G, header + 5 baris) ---
+  sh.getRange('B38:D38').merge().setValue('Produk').setBackground('#F1F5F9')
+    .setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
+  sh.getRange('E38').setValue('Qty').setBackground('#F1F5F9')
+    .setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED).setHorizontalAlignment('center');
+  sh.getRange('F38:G38').merge().setValue('Visualisasi').setBackground('#F1F5F9')
+    .setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
+  sh.setRowHeight(38, 22);
+
+  for (var i = 0; i < 5; i++) {
+    var r = 39 + i;
+    sh.getRange(r, 2, 1, 3).merge().setFormula(
+      '=IFERROR(INDEX(QUERY('+PR+'!A2:O'+MR+',"select B where I > 0 order by I desc limit 5",0),'+(i+1)+',1),"")')
+      .setBackground('#FFFFFF').setFontSize(10).setVerticalAlignment('middle');
+    sh.getRange(r, 5).setFormula(
+      '=IFERROR(INDEX(QUERY('+PR+'!A2:O'+MR+',"select I where I > 0 order by I desc limit 5",0),'+(i+1)+',1),"")')
+      .setBackground('#FFFFFF').setHorizontalAlignment('center').setNumberFormat('#,##0')
+      .setFontWeight('bold').setFontColor(CFG.COLOR.HEADER_BG);
+    sh.getRange(r, 6, 1, 2).merge().setFormula(
+      '=IFERROR(IF(MAX($E$39:$E$43)=0,"",REPT("█",ROUND(E'+r+'/MAX($E$39:$E$43)*15,0))),"")')
+      .setBackground('#FFFFFF').setFontColor(CFG.COLOR.POS).setFontSize(11)
+      .setFontFamily('Consolas').setVerticalAlignment('middle');
+    sh.setRowHeight(r, 24);
+  }
+  sh.getRange('B38:G43').setBorder(true,true,true,true,true,true,'#E2E8F0',SpreadsheetApp.BorderStyle.SOLID);
+
+  // --- PANEL ALERT (kolom H-M) ---
   var alerts = [
     ['📦 Stok minus',         '=COUNTIF('+PR+'!N2:N'+MR+',"Minus")'],
     ['🟡 Stok habis',         '=COUNTIF('+PR+'!N2:N'+MR+',"Habis")'],
@@ -127,80 +167,118 @@ function buildDashboard(ss) {
     ['💸 Saldo akun negatif', '=COUNTIF('+AK+'!F2:F'+MR+',"<0")'],
     ['📥 Piutang jatuh tempo','=COUNTIFS('+UP+'!C2:C'+MR+',"Piutang",'+UP+'!K2:K'+MR+',"*Telat*")+COUNTIFS('+UP+'!C2:C'+MR+',"Piutang",'+UP+'!K2:K'+MR+',"*Jatuh Tempo*")'],
     ['📤 Hutang jatuh tempo', '=COUNTIFS('+UP+'!C2:C'+MR+',"Hutang",'+UP+'!K2:K'+MR+',"*Telat*")+COUNTIFS('+UP+'!C2:C'+MR+',"Hutang",'+UP+'!K2:K'+MR+',"*Jatuh Tempo*")'],
-    ['⏳ Transaksi non-final','=COUNTIF('+JUAL+'!P2:P'+MR+',"Pending")+COUNTIF('+JUAL+'!P2:P'+MR+',"Draft")+COUNTIF('+JUAL+'!P2:P'+MR+',"Proses")'],
-    ['⚠️ Penjualan warning',  '=COUNTIF('+JUAL+'!U2:U'+MR+',"?*")']
+    ['⏳ Transaksi non-final','=COUNTIF('+JUAL+'!P2:P'+MR+',"Pending")+COUNTIF('+JUAL+'!P2:P'+MR+',"Draft")+COUNTIF('+JUAL+'!P2:P'+MR+',"Proses")']
   ];
   for (var i = 0; i < alerts.length; i++) {
-    var r = 17 + i;
-    sh.getRange(r, 9, 1, 4).merge().setValue(alerts[i][0]).setFontSize(10)
+    var r = 38 + i;
+    sh.getRange(r, 8, 1, 5).merge().setValue(alerts[i][0]).setFontSize(10)
       .setBackground('#FFFFFF').setVerticalAlignment('middle').setHorizontalAlignment('left')
-      .setBorder(true,true,true,true,false,false,CFG.COLOR.BORDER,SpreadsheetApp.BorderStyle.SOLID);
+      .setBorder(true,true,true,true,false,false,'#E2E8F0',SpreadsheetApp.BorderStyle.SOLID);
     sh.getRange(r, 13).setFormula(alerts[i][1]).setHorizontalAlignment('center').setFontWeight('bold').setFontSize(11)
       .setBackground('#FFFFFF')
-      .setBorder(true,true,true,true,false,false,CFG.COLOR.BORDER,SpreadsheetApp.BorderStyle.SOLID);
-    sh.setRowHeight(r, 26);
+      .setBorder(true,true,true,true,false,false,'#E2E8F0',SpreadsheetApp.BorderStyle.SOLID);
+    sh.setRowHeight(r, 24);
   }
-  // warna alert: >0 merah, 0 hijau
-  var aRange = sh.getRange(17, 13, alerts.length, 1);
-  var aRules = [
-    SpreadsheetApp.newConditionalFormatRule().whenNumberGreaterThan(0)
-      .setBackground('#FEE2E2').setFontColor(CFG.COLOR.NEG).setRanges([aRange]).build(),
-    SpreadsheetApp.newConditionalFormatRule().whenNumberEqualTo(0)
-      .setBackground('#DCFCE7').setFontColor(CFG.COLOR.POS).setRanges([aRange]).build()
-  ];
-  sh.setConditionalFormatRules(sh.getConditionalFormatRules().concat(aRules));
+  // Conditional formatting alert
+  var aRange = sh.getRange(38, 13, alerts.length, 1);
+  var existing = sh.getConditionalFormatRules();
+  existing.push(SpreadsheetApp.newConditionalFormatRule().whenNumberGreaterThan(0)
+    .setBackground('#FEE2E2').setFontColor(CFG.COLOR.NEG).setRanges([aRange]).build());
+  existing.push(SpreadsheetApp.newConditionalFormatRule().whenNumberEqualTo(0)
+    .setBackground('#DCFCE7').setFontColor(CFG.COLOR.POS).setRanges([aRange]).build());
+  sh.setConditionalFormatRules(existing);
 
-  sh.setRowHeight(35, 18);
+  sh.setRowHeight(45, 14);
 
-  // ---------- SECTION: RINGKASAN BAWAH ----------
-  var base = 36;
-  sh.getRange(base, 2, 1, 11).merge().setValue('  📋  RINGKASAN PERIODE')
-    .setFontWeight('bold').setFontColor('#FFFFFF').setFontSize(11)
-    .setBackground(CFG.COLOR.HEADER_BG).setHorizontalAlignment('left');
-  sh.setRowHeight(base, 24);
+  // ===========================================================
+  //  SECTION: SALDO PER AKUN + PENGELUARAN TERBESAR
+  // ===========================================================
+  sh.getRange('B46:G46').merge().setValue('  🏦  SALDO PER AKUN  ─  dengan persentase')
+    .setBackground(CFG.COLOR.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+  sh.getRange('H46:M46').merge().setValue('  💸  TOP 5 PENGELUARAN  ─  per kategori')
+    .setBackground(CFG.COLOR.NEG).setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+  sh.setRowHeight(46, 24);
 
-  sectionTitle_(sh, base+1, 2, '🏦  SALDO PER AKUN');
-  sh.getRange(base+2, 2).setFormula('=IFERROR(FILTER({'+AK+'!A2:A'+MR+','+AK+'!F2:F'+MR+'},'+AK+'!A2:A'+MR+'<>""),"")');
-  sh.getRange(base+2, 3, 20, 1).setNumberFormat('"Rp"#,##0;[Red]-"Rp"#,##0');
+  // --- SALDO PER AKUN ---
+  sh.getRange('B47:C47').merge().setValue('Akun').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
+  sh.getRange('D47').setValue('Jenis').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
+  sh.getRange('E47').setValue('Saldo').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED).setHorizontalAlignment('right');
+  sh.getRange('F47:G47').merge().setValue('Distribusi').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
+  sh.setRowHeight(47, 22);
 
-  sectionTitle_(sh, base+1, 5, '🏆  TOP PRODUK (Qty)');
-  sh.getRange(base+2, 5).setFormula('=IFERROR(QUERY('+PR+'!A2:O'+MR+',"select B, I where I > 0 order by I desc limit 5",0),"Belum ada penjualan")');
+  for (var i = 0; i < 8; i++) {
+    var r = 48 + i;
+    sh.getRange(r, 2, 1, 2).merge().setFormula('=IFERROR(IF(INDEX('+AK+'!A2:A,'+(i+1)+')="","",INDEX('+AK+'!A2:A,'+(i+1)+')),"")')
+      .setBackground('#FFFFFF').setFontSize(10).setVerticalAlignment('middle');
+    sh.getRange(r, 4).setFormula('=IFERROR(INDEX('+AK+'!B2:B,'+(i+1)+'),"")')
+      .setBackground('#FFFFFF').setFontSize(9).setFontColor(CFG.COLOR.MUTED).setVerticalAlignment('middle');
+    sh.getRange(r, 5).setFormula('=IFERROR(IF(INDEX('+AK+'!A2:A,'+(i+1)+')="","",INDEX('+AK+'!F2:F,'+(i+1)+')),"")')
+      .setBackground('#FFFFFF').setNumberFormat('"Rp"#,##0;[Red]-"Rp"#,##0').setFontWeight('bold')
+      .setHorizontalAlignment('right').setVerticalAlignment('middle');
+    sh.getRange(r, 6, 1, 2).merge().setFormula(
+      '=IFERROR(IF(OR(E'+r+'="",E'+r+'<=0,SUM('+AK+'!F2:F'+MR+')<=0),"",REPT("█",ROUND(E'+r+'/SUM('+AK+'!F2:F'+MR+')*15,0))&"  "&TEXT(E'+r+'/SUM('+AK+'!F2:F'+MR+'),"0%")),"")')
+      .setBackground('#FFFFFF').setFontColor(CFG.COLOR.ACCENT).setFontSize(10)
+      .setFontFamily('Consolas').setVerticalAlignment('middle');
+    sh.setRowHeight(r, 22);
+  }
+  sh.getRange('B47:G55').setBorder(true,true,true,true,true,true,'#E2E8F0',SpreadsheetApp.BorderStyle.SOLID);
 
-  sectionTitle_(sh, base+1, 8, '💰  TOP LABA PRODUK');
-  sh.getRange(base+2, 8).setFormula('=IFERROR(QUERY('+PR+'!A2:P'+MR+',"select B, P where P > 0 order by P desc limit 5",0),"Belum ada penjualan")');
-  sh.getRange(base+2, 9, 6, 1).setNumberFormat('"Rp"#,##0');
+  // --- PENGELUARAN TERBESAR ---
+  sh.getRange('H47:I47').merge().setValue('Kategori').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
+  sh.getRange('J47').setValue('Nominal').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED).setHorizontalAlignment('right');
+  sh.getRange('K47:M47').merge().setValue('Visualisasi').setBackground('#F1F5F9').setFontWeight('bold').setFontSize(9).setFontColor(CFG.COLOR.MUTED);
 
-  sectionTitle_(sh, base+1, 11, '💸  PENGELUARAN');
-  sh.getRange(base+2, 11).setFormula('=IFERROR(QUERY('+TK+'!A2:Q'+MR+',"select D, sum(Q) where C = \'pengeluaran\' group by D order by sum(Q) desc limit 5 label sum(Q) \'\'",0),"Belum ada pengeluaran")');
-  sh.getRange(base+2, 12, 6, 1).setNumberFormat('"Rp"#,##0');
+  for (var i = 0; i < 5; i++) {
+    var r = 48 + i;
+    sh.getRange(r, 8, 1, 2).merge().setFormula(
+      '=IFERROR(INDEX(QUERY('+TK+'!A2:Q'+MR+',"select D, sum(Q) where C = \'pengeluaran\' group by D order by sum(Q) desc limit 5 label sum(Q) \'\'",0),'+(i+1)+',1),"")')
+      .setBackground('#FFFFFF').setFontSize(10).setVerticalAlignment('middle');
+    sh.getRange(r, 10).setFormula(
+      '=IFERROR(INDEX(QUERY('+TK+'!A2:Q'+MR+',"select D, sum(Q) where C = \'pengeluaran\' group by D order by sum(Q) desc limit 5 label sum(Q) \'\'",0),'+(i+1)+',2),"")')
+      .setBackground('#FFFFFF').setNumberFormat('"Rp"#,##0').setFontWeight('bold')
+      .setHorizontalAlignment('right').setVerticalAlignment('middle');
+    sh.getRange(r, 11, 1, 3).merge().setFormula(
+      '=IFERROR(IF(OR(J'+r+'="",J'+r+'<=0,MAX($J$48:$J$52)<=0),"",REPT("█",ROUND(J'+r+'/MAX($J$48:$J$52)*18,0))),"")')
+      .setBackground('#FFFFFF').setFontColor(CFG.COLOR.NEG).setFontSize(11)
+      .setFontFamily('Consolas').setVerticalAlignment('middle');
+    sh.setRowHeight(r, 22);
+  }
+  sh.getRange('H47:M52').setBorder(true,true,true,true,true,true,'#E2E8F0',SpreadsheetApp.BorderStyle.SOLID);
 
-  // catatan audit
-  sh.getRange(base+10, 2, 1, 11).merge().setFormula(
-    '="📝  Catatan Audit: "&COUNTIF('+CFG.SHEET.AUDIT+'!D2:D'+MR+',"*CRITICAL*")&" kritis, "&COUNTIF('+CFG.SHEET.AUDIT+'!D2:D'+MR+',"*WARNING*")&" peringatan. Buka sheet audit untuk detail lengkap.   |   ⚙️ Klik menu Keuangan → 🔄 Refresh setelah input transaksi."')
-    .setFontColor(CFG.COLOR.MUTED).setFontSize(9).setFontStyle('italic')
-    .setBackground('#F1F5F9').setHorizontalAlignment('left')
-    .setVerticalAlignment('middle');
-  sh.setRowHeight(base+10, 22);
+  // ===========================================================
+  //  FOOTER
+  // ===========================================================
+  sh.setRowHeight(56, 12);
+  sh.getRange('B57:M57').merge().setFormula(
+    '="📝  Catatan Audit: "&COUNTIF('+CFG.SHEET.AUDIT+'!D2:D'+MR+',"*CRITICAL*")&" kritis, "&COUNTIF('+CFG.SHEET.AUDIT+'!D2:D'+MR+',"*WARNING*")&" peringatan.   ●   ⚙️ Klik menu Keuangan → 🔄 Refresh setelah input transaksi.   ●   Filter di atas mengubah seluruh angka dashboard."')
+    .setFontColor('#475569').setFontSize(9).setFontStyle('italic')
+    .setBackground('#FFFFFF').setHorizontalAlignment('center').setVerticalAlignment('middle')
+    .setBorder(true,true,true,true,false,false,'#E2E8F0',SpreadsheetApp.BorderStyle.SOLID);
+  sh.setRowHeight(57, 28);
 }
 
-  // ---------------------------------------------------------------------------
-//  Helper visual
 // ---------------------------------------------------------------------------
-function kpiCard_(sh, r, c, label, subtitle, formula, accent) {
-  // baris r   : label (kecil)
-  // baris r+1 : nilai (besar)
-  // baris r+2 : subtitle (italic abu)
-  sh.getRange(r, c, 1, 3).merge().setValue(label).setFontSize(9).setFontColor(CFG.COLOR.MUTED)
+//  Helper: Premium KPI card  (label / nilai besar / subtitle / sparkline)
+// ---------------------------------------------------------------------------
+function premiumKPI_(sh, r, c, label, subtitle, formulaValue, accent, sparklineRange) {
+  sh.getRange(r, c, 1, 3).merge().setValue(label).setFontSize(10).setFontColor('#475569')
     .setFontWeight('bold').setBackground('#FFFFFF').setVerticalAlignment('middle')
     .setHorizontalAlignment('left');
-  sh.getRange(r+1, c, 1, 3).merge().setFormula(formula).setFontSize(16).setFontWeight('bold')
+  sh.getRange(r+1, c, 1, 3).merge().setFormula(formulaValue).setFontSize(18).setFontWeight('bold')
     .setFontColor(accent).setBackground('#FFFFFF').setNumberFormat('"Rp"#,##0;[Red]-"Rp"#,##0')
     .setVerticalAlignment('middle').setHorizontalAlignment('left');
   sh.getRange(r+2, c, 1, 3).merge().setValue(subtitle).setFontSize(8).setFontColor(CFG.COLOR.MUTED)
     .setFontStyle('italic').setBackground('#FFFFFF').setVerticalAlignment('middle')
     .setHorizontalAlignment('left');
-  sh.getRange(r, c, 3, 3).setBorder(true,true,true,true,false,false,CFG.COLOR.BORDER,SpreadsheetApp.BorderStyle.SOLID);
-  sh.setRowHeight(r, 18); sh.setRowHeight(r+1, 36); sh.setRowHeight(r+2, 18);
+  if (sparklineRange) {
+    sh.getRange(r+3, c, 1, 3).merge().setFormula(
+      '=SPARKLINE(' + sparklineRange + ', {"charttype","column";"color","' + accent + '";"empty","zero";"nan","convert"})')
+      .setBackground('#FFFFFF').setVerticalAlignment('middle').setHorizontalAlignment('center');
+  } else {
+    sh.getRange(r+3, c, 1, 3).merge().setValue('').setBackground('#FFFFFF');
+  }
+  sh.getRange(r, c, 4, 3).setBorder(true,true,true,true,false,false,'#CBD5E1',SpreadsheetApp.BorderStyle.SOLID);
+  sh.setRowHeight(r, 18); sh.setRowHeight(r+1, 38); sh.setRowHeight(r+2, 18); sh.setRowHeight(r+3, 32);
 }
 
 function sectionTitle_(sh, r, c, title) {
