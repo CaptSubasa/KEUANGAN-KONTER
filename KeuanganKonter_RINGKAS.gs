@@ -340,6 +340,9 @@ function formulasProduk_(ss) {
   setAF_(sh, 'O2',
     '=ARRAYFORMULA(IF(A2:A'+MR+'="","",'+
     'IF(K2:K'+MR+'<0,"⚠️ Stok minus",IF(K2:K'+MR+'<=N(M2:M'+MR+'),"⚠️ Stok menipis",""))))');
+  sh.getRange('P1').setValue('laba_terjual (sys)');
+  setAF_(sh, 'P2', '=ARRAYFORMULA(IF(A2:A'+MR+'="","",SUMIF('+JUAL+'!$E$2:$E$'+MR+',A2:A'+MR+','+JUAL+'!$W$2:$W$'+MR+')))');
+  sh.hideColumns(16);
 }
 function formulasTransaksiKas_(ss) {
   var sh = ss.getSheetByName(CFG.SHEET.TRANSAKSI_KAS);
@@ -753,12 +756,12 @@ function buildDashboard(ss) {
   sh.getRange(base+1, 2).setFormula('=IFERROR(FILTER({'+AK+'!A2:A'+MR+','+AK+'!F2:F'+MR+'},'+AK+'!A2:A'+MR+'<>""),"")');
   sh.getRange(base+1, 3, 20, 1).setNumberFormat('"Rp"#,##0');
   sectionTitle_(sh, base, 5, '🏆  TOP PRODUK (Qty)');
-  sh.getRange(base+1, 5).setFormula('='+K+'!R2:S6');
+  sh.getRange(base+1, 5).setFormula('=IFERROR(QUERY('+PR+'!A2:O'+MR+',"select B, I where I > 0 order by I desc limit 5",0),"Belum ada penjualan")');
   sectionTitle_(sh, base, 8, '💰  TOP LABA PRODUK');
-  sh.getRange(base+1, 8).setFormula('='+K+'!U2:V6');
+  sh.getRange(base+1, 8).setFormula('=IFERROR(QUERY('+PR+'!A2:P'+MR+',"select B, P where P > 0 order by P desc limit 5",0),"Belum ada penjualan")');
   sh.getRange(base+1, 9, 6, 1).setNumberFormat('"Rp"#,##0');
   sectionTitle_(sh, base, 11, '💸  PENGELUARAN TERBESAR');
-  sh.getRange(base+1, 11).setFormula('='+K+'!X2:Y6');
+  sh.getRange(base+1, 11).setFormula('=IFERROR(QUERY('+TK+'!A2:Q'+MR+',"select D, sum(Q) where C = \'pengeluaran\' group by D order by sum(Q) desc limit 5 label sum(Q) \'\'",0),"Belum ada pengeluaran")');
   sh.getRange(base+1, 12, 6, 1).setNumberFormat('"Rp"#,##0');
   sh.getRange(base+9, 2, 1, 11).merge().setFormula(
     '="Catatan Audit: "&COUNTIF('+CFG.SHEET.AUDIT+'!D2:D'+MR+',"*CRITICAL*")&" kritis, "&COUNTIF('+CFG.SHEET.AUDIT+'!D2:D'+MR+',"*WARNING*")&" peringatan. Buka sheet audit untuk detail."')
@@ -826,9 +829,6 @@ function setupDashboardHelper_(ss) {
   }
   k.getRange(2, 15, 53, 1).setFormulas(fO);   // O2:O54
   k.getRange(2, 16, 53, 1).setFormulas(fP);   // P2:P54
-  k.getRange('R2').setFormula('=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({'+PR+'!B2:B'+MR+',SUMIF('+JUAL+'!$E$2:$E$'+MR+','+PR+'!A2:A'+MR+','+JUAL+'!$V$2:$V$'+MR+')},'+PR+'!B2:B'+MR+'<>""),2,FALSE),5,2),"")');
-  k.getRange('U2').setFormula('=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({'+PR+'!B2:B'+MR+',SUMIF('+JUAL+'!$E$2:$E$'+MR+','+PR+'!A2:A'+MR+','+JUAL+'!$W$2:$W$'+MR+')},'+PR+'!B2:B'+MR+'<>""),2,FALSE),5,2),"")');
-  k.getRange('X2').setFormula('=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({'+DM+'!D2:D'+MR+',SUMIF('+TK+'!$D$2:$D$'+MR+','+DM+'!D2:D'+MR+','+TK+'!$Q$2:$Q$'+MR+')},'+DM+'!D2:D'+MR+'<>""),2,FALSE),5,2),"")');
   var yr = new Date().getFullYear();
   var years = [];
   for (var y = yr - 5; y <= yr + 1; y++) years.push([y]);

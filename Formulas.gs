@@ -102,6 +102,11 @@ function formulasProduk_(ss) {
   setAF_(sh, 'O2',
     '=ARRAYFORMULA(IF(A2:A'+MR+'="","",'+
     'IF(K2:K'+MR+'<0,"⚠️ Stok minus",IF(K2:K'+MR+'<=N(M2:M'+MR+'),"⚠️ Stok menipis",""))))');
+
+  // helper sistem (kolom P) : laba terjual (untuk Top Laba Produk di dashboard)
+  sh.getRange('P1').setValue('laba_terjual (sys)');
+  setAF_(sh, 'P2', '=ARRAYFORMULA(IF(A2:A'+MR+'="","",SUMIF('+JUAL+'!$E$2:$E$'+MR+',A2:A'+MR+','+JUAL+'!$W$2:$W$'+MR+')))');
+  sh.hideColumns(16);
 }
 
 // ---------------------------------------------------------------------------

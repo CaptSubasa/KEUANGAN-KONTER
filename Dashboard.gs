@@ -129,14 +129,14 @@ function buildDashboard(ss) {
   sh.getRange(base+1, 3, 20, 1).setNumberFormat('"Rp"#,##0');
 
   sectionTitle_(sh, base, 5, '🏆  TOP PRODUK (Qty)');
-  sh.getRange(base+1, 5).setFormula('='+K+'!R2:S6');
+  sh.getRange(base+1, 5).setFormula('=IFERROR(QUERY('+PR+'!A2:O'+MR+',"select B, I where I > 0 order by I desc limit 5",0),"Belum ada penjualan")');
 
   sectionTitle_(sh, base, 8, '💰  TOP LABA PRODUK');
-  sh.getRange(base+1, 8).setFormula('='+K+'!U2:V6');
+  sh.getRange(base+1, 8).setFormula('=IFERROR(QUERY('+PR+'!A2:P'+MR+',"select B, P where P > 0 order by P desc limit 5",0),"Belum ada penjualan")');
   sh.getRange(base+1, 9, 6, 1).setNumberFormat('"Rp"#,##0');
 
   sectionTitle_(sh, base, 11, '💸  PENGELUARAN TERBESAR');
-  sh.getRange(base+1, 11).setFormula('='+K+'!X2:Y6');
+  sh.getRange(base+1, 11).setFormula('=IFERROR(QUERY('+TK+'!A2:Q'+MR+',"select D, sum(Q) where C = \'pengeluaran\' group by D order by sum(Q) desc limit 5 label sum(Q) \'\'",0),"Belum ada pengeluaran")');
   sh.getRange(base+1, 12, 6, 1).setNumberFormat('"Rp"#,##0');
 
   // catatan audit
@@ -227,9 +227,7 @@ function setupDashboardHelper_(ss) {
   k.getRange(2, 16, 53, 1).setFormulas(fP);   // P2:P54
 
   // Top list
-  k.getRange('R2').setFormula('=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({'+PR+'!B2:B'+MR+',SUMIF('+JUAL+'!$E$2:$E$'+MR+','+PR+'!A2:A'+MR+','+JUAL+'!$V$2:$V$'+MR+')},'+PR+'!B2:B'+MR+'<>""),2,FALSE),5,2),"")');
-  k.getRange('U2').setFormula('=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({'+PR+'!B2:B'+MR+',SUMIF('+JUAL+'!$E$2:$E$'+MR+','+PR+'!A2:A'+MR+','+JUAL+'!$W$2:$W$'+MR+')},'+PR+'!B2:B'+MR+'<>""),2,FALSE),5,2),"")');
-  k.getRange('X2').setFormula('=IFERROR(ARRAY_CONSTRAIN(SORT(FILTER({'+DM+'!D2:D'+MR+',SUMIF('+TK+'!$D$2:$D$'+MR+','+DM+'!D2:D'+MR+','+TK+'!$Q$2:$Q$'+MR+')},'+DM+'!D2:D'+MR+'<>""),2,FALSE),5,2),"")');
+  // (Top list dipindah ke dashboard memakai QUERY - lebih andal)
 
   // Sumber filter dashboard
   var yr = new Date().getFullYear();
