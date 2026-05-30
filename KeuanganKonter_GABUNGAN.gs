@@ -122,15 +122,28 @@ var HIDDEN_SHEETS = ['_dropdown','_kalkulasi'];
 //  MENU
 // ---------------------------------------------------------------------------
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('⚙️ Keuangan')
+  var ui = SpreadsheetApp.getUi();
+
+  var subTambah = ui.createMenu('➕ Tambah Cepat')
+    .addItem('Tambah Produk Baru', 'tambahProduk')
+    .addItem('Tambah Akun Baru', 'tambahAkun');
+
+  var subReset = ui.createMenu('🧹 Reset / Hapus Data')
+    .addItem('Hapus Semua Data Transaksi', 'confirmHapusDataContoh')
+    .addItem('Reset Daftar Produk', 'confirmResetProduk')
+    .addItem('Reset Daftar Akun', 'confirmResetAkun')
+    .addItem('Reset SEMUA (transaksi + produk + akun)', 'confirmResetTotal');
+
+  ui.createMenu('⚙️ Keuangan')
     .addItem('🔄 Refresh Buku Besar & Saldo', 'rebuildLedger')
+    .addItem('🔒 Bekukan Harga Snapshot Penjualan', 'freezeAllSnapshots')
     .addItem('🧪 Jalankan Skenario Uji', 'runTestScenarios')
     .addSeparator()
-    .addItem('🧹 Hapus Semua Data Contoh (mulai data asli)', 'confirmHapusDataContoh')
-    .addItem('💰 Atur Ulang Saldo Awal Akun', 'aturSaldoAwal')
+    .addSubMenu(subTambah)
+    .addSubMenu(subReset)
+    .addItem('💰 Atur Saldo Awal Akun', 'aturSaldoAwal')
     .addSeparator()
-    .addItem('🏗️ BUILD ULANG SEMUA (reset)', 'confirmBuildAll')
+    .addItem('🏗️ BUILD ULANG SEMUA (reset total)', 'confirmBuildAll')
     .addItem('🔓 Lepas Semua Proteksi', 'removeAllProtections')
     .addToUi();
 }
@@ -289,6 +302,166 @@ function aturSaldoAwal() {
     '- Saldo Supplier (deposit di supplier pulsa)\n\n' +
     'Setelah selesai, klik ⚙️ Keuangan → 🔄 Refresh.',
     SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+
+
+// ===========================================================================
+//  RESET PRODUK
+// ===========================================================================
+function confirmResetProduk() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.alert('🧹 Reset Daftar Produk',
+    'HAPUS semua produk di sheet "produk"?\n\n' +
+    '⚠️ Setelah reset, dropdown produk di penjualan/pembelian akan kosong sampai Anda input produk baru.\n\n' +
+    'Lanjutkan?', ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) return;
+  resetProduk();
+  ui.alert('✅ Selesai',
+    'Daftar produk dikosongkan.\n\nIsi produk baru via:\n' +
+    '• Menu ⚙️ Keuangan → ➕ Tambah Cepat → Tambah Produk Baru, atau\n' +
+    '• Langsung ketik di sheet "produk" (Kode, Nama, Kategori, Modal, Jual, Stok Awal).',
+    ui.ButtonSet.OK);
+}
+
+function resetProduk() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var pr = ss.getSheetByName(CFG.SHEET.PRODUK);
+  if (!pr) return;
+  pr.getRange(2, 1, CFG.MAX_ROW - 1, HEADERS.produk.length).clearContent();
+  logChange(ss, 'produk', 'RESET', 'Daftar produk dikosongkan');
+  ss.setActiveSheet(pr); pr.getRange('A2').activate();
+}
+
+// ===========================================================================
+//  RESET AKUN
+// ===========================================================================
+function confirmResetAkun() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.alert('🧹 Reset Daftar Akun',
+    'HAPUS semua akun di sheet "akun"?\n\n' +
+    '⚠️ Setelah reset, dropdown akun (Kas Utama, Bank, dll) akan kosong sampai Anda input akun baru.\n\n' +
+    'Lanjutkan?', ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) return;
+  resetAkun();
+  ui.alert('✅ Selesai',
+    'Daftar akun dikosongkan.\n\nIsi akun baru via:\n' +
+    '• Menu ⚙️ Keuangan → ➕ Tambah Cepat → Tambah Akun Baru, atau\n' +
+    '• Langsung ketik di sheet "akun" (Nama, Jenis, Saldo Awal).',
+    ui.ButtonSet.OK);
+}
+
+function resetAkun() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ak = ss.getSheetByName(CFG.SHEET.AKUN);
+  if (!ak) return;
+  ak.getRange(2, 1, CFG.MAX_ROW - 1, HEADERS.akun.length).clearContent();
+  logChange(ss, 'akun', 'RESET', 'Daftar akun dikosongkan');
+  ss.setActiveSheet(ak); ak.getRange('A2').activate();
+}
+
+// ===========================================================================
+//  RESET SEMUA (transaksi + produk + akun)
+// ===========================================================================
+function confirmResetTotal() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.alert('⚠️ Reset SEMUA',
+    'INI AKAN MENGHAPUS:\n' +
+    '• Semua transaksi (penjualan, pembelian, transaksi_kas, dll)\n' +
+    '• Semua produk\n' +
+    '• Semua akun\n' +
+    '• Buku besar & log\n\n' +
+    'Yang TIDAK dihapus: data_master (status, kategori, supplier, dll).\n\n' +
+    'Yakin lanjut?', ui.ButtonSet.YES_NO);
+  if (res !== ui.Button.YES) return;
+  hapusDataContoh();
+  resetProduk();
+  resetAkun();
+  SpreadsheetApp.getActiveSpreadsheet().toast('Semua data dihapus. Mulai dari nol.', '✅ Reset Total', 6);
+  ui.alert('✅ Reset Total Selesai',
+    'Sistem kembali kosong.\n\nLANGKAH MULAI:\n' +
+    '1. ➕ Tambah Akun Baru (Kas, Bank, QRIS, dll) + saldo awal\n' +
+    '2. ➕ Tambah Produk Baru (pulsa, paket data, dll)\n' +
+    '3. Mulai input transaksi harian\n' +
+    '4. 🔄 Refresh setiap selesai input',
+    ui.ButtonSet.OK);
+}
+
+// ===========================================================================
+//  TAMBAH PRODUK CEPAT (form via prompt)
+// ===========================================================================
+function tambahProduk() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var pr = ss.getSheetByName(CFG.SHEET.PRODUK);
+
+  var p1 = ui.prompt('➕ Tambah Produk - 1/6', 'Kode Produk (mis. PUL5):', ui.ButtonSet.OK_CANCEL);
+  if (p1.getSelectedButton() !== ui.Button.OK || !p1.getResponseText().trim()) return;
+  var p2 = ui.prompt('➕ Tambah Produk - 2/6', 'Nama Produk (mis. Pulsa 5K):', ui.ButtonSet.OK_CANCEL);
+  if (p2.getSelectedButton() !== ui.Button.OK || !p2.getResponseText().trim()) return;
+  var p3 = ui.prompt('➕ Tambah Produk - 3/6',
+    'Kategori. Pilih salah satu:\n• Pulsa\n• Paket Data\n• Voucher\n• Token Listrik\n• E-Wallet\n• Layanan Digital',
+    ui.ButtonSet.OK_CANCEL);
+  if (p3.getSelectedButton() !== ui.Button.OK) return;
+  var p4 = ui.prompt('➕ Tambah Produk - 4/6', 'Harga Modal Default (angka, mis. 5500):', ui.ButtonSet.OK_CANCEL);
+  if (p4.getSelectedButton() !== ui.Button.OK) return;
+  var p5 = ui.prompt('➕ Tambah Produk - 5/6', 'Harga Jual Default (angka, mis. 6500):', ui.ButtonSet.OK_CANCEL);
+  if (p5.getSelectedButton() !== ui.Button.OK) return;
+  var p6 = ui.prompt('➕ Tambah Produk - 6/6', 'Stok Awal (angka, mis. 100. Untuk pulsa/PPOB tanpa stok fisik isi 0):', ui.ButtonSet.OK_CANCEL);
+  if (p6.getSelectedButton() !== ui.Button.OK) return;
+
+  var row = nextEmptyRow_(pr, 1);
+  pr.getRange(row, 1, 1, 7).setValues([[
+    p1.getResponseText().trim().toUpperCase(),
+    p2.getResponseText().trim(),
+    (p3.getResponseText().trim() || 'Pulsa'),
+    'transaksi',
+    Number(p4.getResponseText()) || 0,
+    Number(p5.getResponseText()) || 0,
+    Number(p6.getResponseText()) || 0
+  ]]);
+  pr.getRange(row, 13).setValue(5); // minimal stok default 5
+  ss.toast('Produk "' + p2.getResponseText().trim() + '" ditambahkan ✅', 'Sukses', 5);
+  logChange(ss, 'produk', 'TAMBAH', p2.getResponseText().trim());
+}
+
+// ===========================================================================
+//  TAMBAH AKUN CEPAT
+// ===========================================================================
+function tambahAkun() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ak = ss.getSheetByName(CFG.SHEET.AKUN);
+
+  var p1 = ui.prompt('➕ Tambah Akun - 1/3', 'Nama Akun (mis. Bank Mandiri):', ui.ButtonSet.OK_CANCEL);
+  if (p1.getSelectedButton() !== ui.Button.OK || !p1.getResponseText().trim()) return;
+  var p2 = ui.prompt('➕ Tambah Akun - 2/3',
+    'Jenis Akun. Pilih salah satu:\n• Kas\n• Bank\n• E-Wallet\n• QRIS\n• Supplier',
+    ui.ButtonSet.OK_CANCEL);
+  if (p2.getSelectedButton() !== ui.Button.OK) return;
+  var p3 = ui.prompt('➕ Tambah Akun - 3/3', 'Saldo Awal (angka, mis. 1000000):', ui.ButtonSet.OK_CANCEL);
+  if (p3.getSelectedButton() !== ui.Button.OK) return;
+
+  var row = nextEmptyRow_(ak, 1);
+  ak.getRange(row, 1, 1, 3).setValues([[
+    p1.getResponseText().trim(),
+    (p2.getResponseText().trim() || 'Kas'),
+    Number(p3.getResponseText()) || 0
+  ]]);
+  ss.toast('Akun "' + p1.getResponseText().trim() + '" ditambahkan ✅', 'Sukses', 5);
+  logChange(ss, 'akun', 'TAMBAH', p1.getResponseText().trim());
+  rebuildLedger();
+}
+
+/** Cari baris kosong pertama berdasarkan kolom kunci */
+function nextEmptyRow_(sh, keyCol) {
+  var last = sh.getLastRow();
+  if (last < 1) return 2;
+  var vals = sh.getRange(2, keyCol, Math.max(last, CFG.MAX_ROW) - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (vals[i][0] === '' || vals[i][0] === null) return i + 2;
+  }
+  return Math.min(last + 1, CFG.MAX_ROW);
 }
 
 
